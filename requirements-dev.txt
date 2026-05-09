@@ -1,0 +1,17 @@
+# CDK and development dependencies (NOT deployed to Lambda)
+attrs==25.4.0
+aws-cdk-lib==2.250.0
+aws-cdk.asset-awscli-v1==2.2.273
+aws-cdk.asset-node-proxy-agent-v6==2.1.1
+aws-cdk.cloud-assembly-schema==53.17.0
+cattrs==25.3.0
+constructs==10.6.0
+importlib_resources==7.1.0
+jsii==1.128.0
+publication==0.0.3
+python-dateutil==2.9.0.post0
+typeguard==2.13.3
+typing_extensions==4.15.0
+
+# Local dev — PostgreSQL (Lambda uses psycopg2 layer instead)
+psycopg2-binary>=2.9.9

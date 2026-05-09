@@ -1,0 +1,21 @@
+# CDK
+cdk.out/
+.cdk.staging/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Credentials — NEVER commit
+credentials/
+
+# Lambda layers (installed dependencies)
+layers/dependencies/
+
+# Env
+.env
+.env.*
