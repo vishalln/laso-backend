@@ -35,12 +35,14 @@ class BackendStack(Stack):
 
         hello_lambda = PythonLambdaConstruct(
             self, "HelloLambda",
+            function_name="laso-hello",
             path="src",
             handler="laso.handlers.hello_handler.lambda_handler",
         )
 
         quiz_lambda = PythonLambdaConstruct(
             self, "QuizLambda",
+            function_name="laso-quiz",
             path="src",
             handler="laso.handlers.quiz_handler.lambda_handler",
             environment=db_env,

@@ -1,4 +1,4 @@
-"""Auth Stack — Cognito User Pool, Groups, App Client, OAuth."""
+"""Auth Stack — Cognito User Pool, Groups, App Client, OAuth, Post-Confirmation Trigger."""
 
 from aws_cdk import (
     Stack,
@@ -6,11 +6,14 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     aws_cognito as cognito,
+    aws_lambda as _lambda,
     aws_secretsmanager as secretsmanager,
 )
 from constructs import Construct
 
+from lib.app_constructs.lambda_construct import PythonLambdaConstruct
 from lib.config.auth_config import USER_POOL, USER_GROUPS, OAUTH
+from lib.config.data_config import LAYER
 from src.laso.constants.oauth import OAuthProvider
 
 
@@ -18,7 +21,14 @@ class AuthStack(Stack):
     user_pool: cognito.UserPool
     app_client: cognito.UserPoolClient
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        *,
+        db_secret: secretsmanager.Secret,
+        **kwargs,
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         self.user_pool = self._create_user_pool()
@@ -27,6 +37,7 @@ class AuthStack(Stack):
         self.google_secret = self._get_google_secret()
         self.google_provider = self._create_google_provider()
         self.app_client = self._create_app_client()
+        self._create_post_confirmation_trigger(db_secret)
         self._create_outputs()
 
     def _create_user_pool(self) -> cognito.UserPool:
@@ -116,6 +127,30 @@ class AuthStack(Stack):
         )
         app_client.node.add_dependency(self.google_provider)
         return app_client
+
+    def _create_post_confirmation_trigger(self, db_secret: secretsmanager.Secret) -> None:
+        deps_layer = _lambda.LayerVersion(
+            self, "PostConfirmDepsLayer",
+            layer_version_name=f"{LAYER.name}-post-confirm",
+            description=LAYER.description,
+            code=_lambda.Code.from_asset(LAYER.asset_path),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+        )
+
+        trigger_fn = PythonLambdaConstruct(
+            self, "PostConfirmationTrigger",
+            function_name="laso-post-confirmation",
+            path="src",
+            handler="laso.handlers.post_confirmation_handler.lambda_handler",
+            environment={"DB_SECRET_ARN": db_secret.secret_arn},
+            layers=[deps_layer],
+        )
+        db_secret.grant_read(trigger_fn.function)
+
+        self.user_pool.add_trigger(
+            cognito.UserPoolOperation.POST_CONFIRMATION,
+            trigger_fn.function,
+        )
 
     def _create_outputs(self) -> None:
         CfnOutput(self, "UserPoolId",

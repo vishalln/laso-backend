@@ -115,9 +115,46 @@ class CognitoClient:
         params = {"UserPoolId": self.user_pool_id, "Limit": limit}
         if pagination_token:
             params["PaginationToken"] = pagination_token
-        
+
         response = self.client.list_users(**params)
         log.info("list_users | success", extra={
             "count": len(response.get("Users", []))
         })
         return response
+
+    def admin_create_user(self, email: str, name: str, group: str, suppress_invite: bool = True) -> str:
+        log.info("admin_create_user | email=%s group=%s", email, group)
+        response = self.client.admin_create_user(
+            UserPoolId=self.user_pool_id,
+            Username=email,
+            UserAttributes=[
+                {"Name": COGNITO_ATTR.EMAIL, "Value": email},
+                {"Name": COGNITO_ATTR.EMAIL_VERIFIED, "Value": "true"},
+                {"Name": COGNITO_ATTR.NAME, "Value": name},
+            ],
+            MessageAction="SUPPRESS" if suppress_invite else "RESEND",
+        )
+        user_sub = next(
+            (a["Value"] for a in response["User"]["Attributes"] if a["Name"] == "sub"), ""
+        )
+        self.add_user_to_group(email, group)
+        log.info("admin_create_user | success | sub=%s email=%s group=%s", user_sub, email, group)
+        return user_sub
+
+    def admin_set_password(self, email: str, password: str, permanent: bool = True) -> None:
+        log.info("admin_set_password | email=%s", email)
+        self.client.admin_set_user_password(
+            UserPoolId=self.user_pool_id,
+            Username=email,
+            Password=password,
+            Permanent=permanent,
+        )
+        log.info("admin_set_password | success | email=%s", email)
+
+    def delete_user(self, email: str) -> None:
+        log.info("delete_user", extra={"email": email})
+        self.client.admin_delete_user(
+            UserPoolId=self.user_pool_id,
+            Username=email
+        )
+        log.info("delete_user | success", extra={"email": email})

@@ -8,8 +8,8 @@ import aws_cdk as cdk
 from lib.stacks.vpc_stack import VpcStack
 from lib.stacks.data_stack import DataStack
 from lib.stacks.auth_stack import AuthStack
-from lib.stacks.backend_stack import BackendStack
-from lib.stacks.admin_stack import AdminStack
+from lib.stacks.api_stack import ApiStack
+from lib.stacks.cron_stack import CronStack
 
 app = cdk.App()
 
@@ -25,23 +25,24 @@ data_stack = DataStack(
 )
 data_stack.add_dependency(vpc_stack)
 
-auth_stack = AuthStack(app, "LasoAuthStack", env=env)
+auth_stack = AuthStack(app, "LasoAuthStack", db_secret=data_stack.db_secret, env=env)
+auth_stack.add_dependency(data_stack)
 
-backend_stack = BackendStack(
-    app, "LasoBackendStack",
+api_stack = ApiStack(
+    app, "LasoApiStack",
     db_secret=data_stack.db_secret,
-    env=env,
-)
-backend_stack.add_dependency(data_stack)
-
-admin_stack = AdminStack(
-    app, "LasoAdminStack",
     user_pool=auth_stack.user_pool,
     app_client=auth_stack.app_client,
+    env=env,
+)
+api_stack.add_dependency(data_stack)
+api_stack.add_dependency(auth_stack)
+
+cron_stack = CronStack(
+    app, "LasoCronStack",
     db_secret=data_stack.db_secret,
     env=env,
 )
-admin_stack.add_dependency(auth_stack)
-admin_stack.add_dependency(data_stack)
+cron_stack.add_dependency(data_stack)
 
 app.synth()

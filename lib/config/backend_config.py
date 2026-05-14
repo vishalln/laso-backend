@@ -16,6 +16,14 @@ class ApiConfig:
     throttle_burst:  int = 200
 
 
-# ── Singletons consumed by BackendStack / AdminStack ─────────────────────────
+@dataclass(frozen=True)
+class CronConfig:
+    missed_checkin_schedule: str = "30 19 ? * SUN *"
+    task_archiver_schedule:  str = "30 20 * * ? *"
+    consult_status_schedule: str = "rate(5 minutes)"
+
+
+# ── Singletons consumed by ApiStack / CronStack ──────────────────────────────
 LAMBDA = LambdaConfig()
 API    = ApiConfig()
+CRON   = CronConfig()

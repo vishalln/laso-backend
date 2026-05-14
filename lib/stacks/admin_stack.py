@@ -51,6 +51,7 @@ class AdminStack(Stack):
     ) -> PythonLambdaConstruct:
         return PythonLambdaConstruct(
             self, "AdminLambda",
+            function_name="laso-admin",
             path="src",
             handler="laso.handlers.admin_handler.lambda_handler",
             environment={

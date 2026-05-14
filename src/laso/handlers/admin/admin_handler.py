@@ -31,6 +31,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     route_map = {
         "PUT /admin/users/{user_email}/role": update_user_role,
+        "PUT /admin/users/{user_email}/status": toggle_user_status,
+        "DELETE /admin/users/{user_email}/purge": purge_user,
         "GET /admin/users": list_all_users,
         "GET /admin/users/{user_email}": get_user_details,
     }
@@ -181,6 +183,63 @@ def get_user_details(event: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         log.error("get_user_details | error=%s", e, exc_info=True)
         return response(HttpStatus.INTERNAL_SERVER_ERROR, {"error": "Failed to get user details"})
+
+
+def toggle_user_status(event: Dict[str, Any]) -> Dict[str, Any]:
+    log.info("toggle_user_status | start")
+
+    try:
+        admin_user = extract_user_from_token(event)
+        if admin_user.role != UserRole.ADMIN:
+            return response(HttpStatus.FORBIDDEN, {"error": AUTH_ERRORS.ERROR_ADMIN_ONLY})
+
+        target_email = event["pathParameters"]["user_email"]
+        body = json.loads(event["body"])
+        status = body.get("status", "").lower()
+        log.info("toggle_user_status | target=%s status=%s", target_email, status)
+
+        from laso.services import admin_user_service
+        result = admin_user_service.toggle_status(email=target_email, status=status)
+
+        return response(HttpStatus.OK, result)
+
+    except KeyError as e:
+        log.error("toggle_user_status | missing_field=%s", e)
+        return response(HttpStatus.BAD_REQUEST, {"error": f"Missing required field: {str(e)}"})
+    except ClientError as e:
+        log.error("toggle_user_status | cognito_error=%s", e)
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, {"error": "Failed to toggle user status"})
+    except Exception as e:
+        log.error("toggle_user_status | error=%s", e, exc_info=True)
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, {"error": "Failed to toggle user status"})
+
+
+def purge_user(event: Dict[str, Any]) -> Dict[str, Any]:
+    log.info("purge_user | start")
+
+    try:
+        admin_user = extract_user_from_token(event)
+        if admin_user.role != UserRole.ADMIN:
+            return response(HttpStatus.FORBIDDEN, {"error": AUTH_ERRORS.ERROR_ADMIN_ONLY})
+
+        target_email = event["pathParameters"]["user_email"]
+        log.info("purge_user | target=%s admin=%s", target_email, admin_user.email)
+
+        from laso.services import admin_user_service
+        result = admin_user_service.purge(email=target_email, cognito_client=cognito_client)
+
+        log.info("purge_user | success | target=%s deleted=%s", target_email, result)
+        return response(HttpStatus.OK, {"message": "User purged", "email": target_email, "deleted": result})
+
+    except ClientError as e:
+        log.error("purge_user | cognito_error=%s", e)
+        error_code = e.response["Error"]["Code"]
+        if error_code == CognitoErrorCode.USER_NOT_FOUND.value:
+            return response(HttpStatus.NOT_FOUND, {"error": AUTH_ERRORS.ERROR_USER_NOT_FOUND})
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, {"error": "Failed to purge user"})
+    except Exception as e:
+        log.error("purge_user | error=%s", e, exc_info=True)
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, {"error": "Failed to purge user"})
 
 
 def extract_user_from_token(event: Dict[str, Any]) -> User:

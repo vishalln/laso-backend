@@ -21,6 +21,7 @@ class PythonLambdaConstruct(Construct):
         *,
         path: str,
         handler: str,
+        function_name: str | None = None,
         environment: dict[str, str] | None = None,
         vpc: ec2.IVpc | None = None,
         vpc_subnets: ec2.SubnetSelection | None = None,
@@ -32,6 +33,7 @@ class PythonLambdaConstruct(Construct):
 
         self.function = _lambda.Function(
             self, "Function",
+            function_name=function_name,
             runtime=_lambda.Runtime.PYTHON_3_11,
             handler=handler,
             code=_lambda.Code.from_asset(path),

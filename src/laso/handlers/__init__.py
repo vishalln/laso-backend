@@ -1,1 +1,22 @@
-__all__ = ["quiz_handler", "admin_handler"]
+__all__ = [
+    "admin_handler",
+    "admin_analytics_handler",
+    "admin_catalog_handler",
+    "admin_doctor_handler",
+    "admin_protocol_handler",
+    "blood_test_handler",
+    "check_in_handler",
+    "clinical_note_handler",
+    "consultation_handler",
+    "dashboard_handler",
+    "message_handler",
+    "order_handler",
+    "patient_handler",
+    "payment_handler",
+    "prescription_handler",
+    "programme_handler",
+    "quiz_handler",
+    "refill_handler",
+    "task_handler",
+    "treatment_plan_handler",
+]

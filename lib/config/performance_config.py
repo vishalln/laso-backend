@@ -39,8 +39,22 @@ class GoogleCalendarPerformance:
     default_duration_minutes: int = 30
 
 
+@dataclass(frozen=True)
+class DbRetryPerformance:
+    max_attempts: int = 3
+    backoff_base_ms: int = 200
+
+
+@dataclass(frozen=True)
+class PaginationPerformance:
+    default_limit: int = 20
+    max_limit: int = 100
+
+
 COGNITO = CognitoPerformance()
 DYNAMO = DynamoPerformance()
 API = ApiPerformance()
 LAMBDA = LambdaPerformance()
 GOOGLE_CALENDAR = GoogleCalendarPerformance()
+DB_RETRY = DbRetryPerformance()
+PAGINATION = PaginationPerformance()
